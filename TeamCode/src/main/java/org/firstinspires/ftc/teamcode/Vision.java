@@ -14,7 +14,8 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 @TeleOp
 public class Vision extends LinearOpMode {
     @Override
-    public void runOpMode() {
+    public void runOpMode() throws InterruptedException {
+        waitForStart();
         while (opModeIsActive()) {
             AprilTagProcessor tagProcessor = new AprilTagProcessor.Builder()
                     .setDrawAxes(true)
@@ -33,7 +34,7 @@ public class Vision extends LinearOpMode {
 
             while (!isStopRequested() && opModeIsActive()) {
 
-                if (!tagProcessor.getDetections().isEmpty()){
+                if (tagProcessor.getDetections().size() > 0){
                     AprilTagDetection tag = tagProcessor.getDetections().get(0);
 
                     telemetry.addData("x", tag.ftcPose.x);
