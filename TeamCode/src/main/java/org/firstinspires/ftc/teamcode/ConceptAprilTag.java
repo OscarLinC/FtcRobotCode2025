@@ -32,6 +32,8 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -66,8 +68,9 @@ import java.util.List;
  * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list.
  */
 @TeleOp(name = "Concept: AprilTag", group = "Concept")
-@Disabled
+
 public class ConceptAprilTag extends LinearOpMode {
+    private DriveTrain drivetrain;
 
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
 
@@ -76,11 +79,13 @@ public class ConceptAprilTag extends LinearOpMode {
      */
     private AprilTagProcessor aprilTag;
 
+
     /**
      * The variable to store our instance of the vision portal.
      */
     private VisionPortal visionPortal;
-
+    private DcMotorEx throwingMotor;
+//    private DcMotorEx intakeMotor;
     @Override
     public void runOpMode() {
 
@@ -90,10 +95,59 @@ public class ConceptAprilTag extends LinearOpMode {
         telemetry.addData("DS preview on/off", "3 dots, Camera Stream");
         telemetry.addData(">", "Touch START to start OpMode");
         telemetry.update();
+        throwingMotor = hardwareMap.get(DcMotorEx.class, "Throwing Motor");
+//        hardwareMap.get(DcMotorEx.class, "Intake Motor ");
+        drivetrain = new DriveTrain(
+                hardwareMap.get(DcMotorEx.class, "M1"), //top left
+                hardwareMap.get(DcMotorEx.class, "M2"), // bottom left
+                hardwareMap.get(DcMotorEx.class, "M3"),// top right
+                hardwareMap.get(DcMotorEx.class, "M4")); //bottom right
         waitForStart();
 
         if (opModeIsActive()) {
             while (opModeIsActive()) {
+
+
+                ;
+
+                Gamepad curGamepad1 = new Gamepad();
+                Gamepad curGamepad2 = new Gamepad();
+                Gamepad prevGamepad1 = new Gamepad();
+                Gamepad prevGamepad2 = new Gamepad();
+
+                curGamepad1 = gamepad1;
+
+                if (curGamepad1.a && !prevGamepad1.a){
+                    drivetrain.runMotorPower(-1, -1, 1, 1); //walk forward
+                }
+
+
+               if (curGamepad1.b){
+                    throwingMotor.setPower(1); //start throwing lol
+             }
+//
+//                if (curGamepad1.x){
+//
+//                }
+
+                if(!aprilTag.getDetections().isEmpty()){
+
+                    AprilTagDetection firstDetection = aprilTag.getDetections().get(0);
+                    if (firstDetection.metadata != null) {
+                        double target = firstDetection.ftcPose.x;
+                        double error = (target - 320) / 320;
+                        if (error > 1) {
+                            error = 1;
+                        } else if (error < -1) {
+                            error = -1;
+                        }
+                        drivetrain.runMotorPower(error, error, error, error);
+                        telemetry.addData("Error:", error);
+                    }
+                }
+
+                drivetrain.drive(gamepad1, 1);
+
 
                 telemetryAprilTag();
 
@@ -109,11 +163,14 @@ public class ConceptAprilTag extends LinearOpMode {
 
                 // Share the CPU.
                 sleep(20);
+                prevGamepad1 = curGamepad1;
+                prevGamepad2 = curGamepad2;
             }
         }
 
         // Save more CPU resources when camera is no longer needed.
         visionPortal.close();
+
 
     }   // end method runOpMode()
 
@@ -201,6 +258,7 @@ public class ConceptAprilTag extends LinearOpMode {
                 telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (inch)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
                 telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detection.ftcPose.pitch, detection.ftcPose.roll, detection.ftcPose.yaw));
                 telemetry.addLine(String.format("RBE %6.1f %6.1f %6.1f  (inch, deg, deg)", detection.ftcPose.range, detection.ftcPose.bearing, detection.ftcPose.elevation));
+
             } else {
                 telemetry.addLine(String.format("\n==== (ID %d) Unknown", detection.id));
                 telemetry.addLine(String.format("Center %6.0f %6.0f   (pixels)", detection.center.x, detection.center.y));
@@ -211,6 +269,7 @@ public class ConceptAprilTag extends LinearOpMode {
         telemetry.addLine("\nkey:\nXYZ = X (Right), Y (Forward), Z (Up) dist.");
         telemetry.addLine("PRY = Pitch, Roll & Yaw (XYZ Rotation)");
         telemetry.addLine("RBE = Range, Bearing & Elevation");
+
 
     }   // end method telemetryAprilTag()
 

@@ -9,10 +9,10 @@ public class DriveTrain {
     /*
     Motor positions:
        ------
-    m1|      |m3
+   - m1|      |m3 +
       |      |
       |      |
-    m2|      |m4
+    -m2|      |m4 +
        ------
      */
 
@@ -103,10 +103,10 @@ public class DriveTrain {
 
     // Drive for TeleOp
     public void drive(Gamepad gamepad2, double sensitivity) {
-        m1.setPower((-gamepad2.left_stick_x + gamepad2.left_stick_y + gamepad2.left_trigger - gamepad2.right_trigger) * sensitivity);
-        m2.setPower((gamepad2.left_stick_x + gamepad2.left_stick_y + gamepad2.left_trigger - gamepad2.right_trigger) * sensitivity);
-        m3.setPower((-gamepad2.left_stick_x - gamepad2.left_stick_y + gamepad2.left_trigger - gamepad2.right_trigger) * sensitivity);
-        m4.setPower((gamepad2.left_stick_x - gamepad2.left_stick_y + gamepad2.left_trigger - gamepad2.right_trigger) * sensitivity);
+        m1.setPower((-gamepad2.left_stick_x - gamepad2.left_stick_y + gamepad2.left_trigger - gamepad2.right_trigger) * sensitivity);
+        m2.setPower((gamepad2.left_stick_x - gamepad2.left_stick_y + gamepad2.left_trigger - gamepad2.right_trigger) * sensitivity);
+        m3.setPower((-gamepad2.left_stick_x + gamepad2.left_stick_y + gamepad2.left_trigger - gamepad2.right_trigger) * sensitivity);
+        m4.setPower((gamepad2.left_stick_x + gamepad2.left_stick_y + gamepad2.left_trigger - gamepad2.right_trigger) * sensitivity);
     }
 
     // Set the motor modes for TeleOp
