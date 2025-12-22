@@ -107,7 +107,7 @@ public class ConceptAprilTag extends LinearOpMode {
             else throwingMotor.setPower(0);
 
             // Bruce manual control
-            bruce.setPower(curGamepad1.right_stick_x * -0.1);
+            bruce.setPower(curGamepad1.right_stick_x * -1);
 
             if (curGamepad1.dpad_left) {
                 bruce.setPower(0.1);
@@ -145,11 +145,11 @@ public class ConceptAprilTag extends LinearOpMode {
 
                 error = Math.max(-1, Math.min(1, error));
 
-                double turn = error * 0.8;
-                if (Math.abs(error) < 0.05) turn = 0;
-                turn = Math.max(-0.4, Math.min(0.4, turn));
+//                double turn = error * 0.8;
+//                if (Math.abs(error) < 0.05) turn = 0;
+//                turn = Math.max(-0.4, Math.min(0.4, turn));
 
-                drivetrain.runMotorPower(-turn, -turn, turn, turn);
+                bruce.setPower(-error);
 
             } else {
                 drivetrain.drive(gamepad1, 1);
@@ -189,7 +189,7 @@ public class ConceptAprilTag extends LinearOpMode {
             builder.setCamera(BuiltinCameraDirection.BACK);
         }
 
-        builder.setCameraResolution(new Size(1280, 960));
+        builder.setCameraResolution(new Size(640, 480));
         builder.enableLiveView(true);
         builder.setStreamFormat(VisionPortal.StreamFormat.YUY2);
         builder.addProcessor(aprilTag);
