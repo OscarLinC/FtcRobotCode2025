@@ -39,8 +39,11 @@ import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
+import org.firstinspires.ftc.vision.apriltag.AprilTagGameDatabase;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.util.List;
@@ -60,12 +63,20 @@ public class ConceptAprilTag extends LinearOpMode {
     private DcMotorEx intakeMotor;
     private Servo spinning_pad_discrete;
 
+    private Servo throwPitchAdjuster;
+
     // ----- DISCRETE SERVO CONTROL -----
     int servoStep = 8;                // 0,1,2
     final int SERVO_STEPS = 15;         // 360 / 120
 
     double servo_position=0.5;
     double step=0;
+    boolean toggleIntake = false;
+    boolean toggleSpitOut = false;
+    boolean toggleThrow = false;
+    double currentPitch;
+    double pitchStep = 0.02;
+    double targetPitch;
 
     @Override
     public void runOpMode() {
@@ -80,6 +91,7 @@ public class ConceptAprilTag extends LinearOpMode {
         bruce = hardwareMap.get(DcMotorEx.class, "Bruce");
         intakeMotor = hardwareMap.get(DcMotorEx.class, "Intake Motor");
         spinning_pad_discrete = hardwareMap.get(Servo.class, "Spinning Pad");
+        throwPitchAdjuster = hardwareMap.get(Servo.class, "Throw Pitch Adjuster");
 
         drivetrain = new DriveTrain(
                 hardwareMap.get(DcMotorEx.class, "M1"),
@@ -98,30 +110,48 @@ public class ConceptAprilTag extends LinearOpMode {
             prevGamepad1.copy(curGamepad1);
             curGamepad1.copy(gamepad1);
 
+            if (curGamepad1.dpad_up) throwPitchAdjuster.setPosition(0.5);
+            else if (curGamepad1.dpad_down) throwPitchAdjuster.setPosition(0.11);
+
+            //Pitch manual control
+
+
+
+
+
             // Intake
-            if (curGamepad1.a) intakeMotor.setPower(1);
+            if (curGamepad1.a && !prevGamepad1.a) {
+                toggleIntake = !toggleIntake;
+                toggleSpitOut = false;
+            }
+            if (curGamepad1.x && !prevGamepad1.x) {
+                toggleSpitOut = !toggleSpitOut;
+                toggleIntake = false;
+            }
+
+            if (toggleIntake) {
+                intakeMotor.setPower(1);
+            }
+            else if (toggleSpitOut) {
+                intakeMotor.setPower(-1);
+            }
             else intakeMotor.setPower(0);
 
             // Throwing
-            if (curGamepad1.b) throwingMotor.setPower(1);
+            if (curGamepad1.b && !prevGamepad1.b) toggleThrow = ! toggleThrow;
+            if (toggleThrow) throwingMotor.setPower(1);
             else throwingMotor.setPower(0);
 
             // Bruce manual control
             bruce.setPower(curGamepad1.right_stick_x * -1);
-
-            if (curGamepad1.right_stick_x == 0) {
-                bruce.setPower(0);
-            }
+            if (curGamepad1.right_stick_x == 0) bruce.setPower(0);
 
             // -------- SERVO DISCRETE ROTATION --------
-
-            // Clockwise
             if (curGamepad1.dpad_right && !prevGamepad1.dpad_right) {
                 servoStep++;
                 if (servoStep >= SERVO_STEPS) servoStep = SERVO_STEPS;
             }
 
-            // Counter-clockwise
             if (curGamepad1.dpad_left && !prevGamepad1.dpad_left) {
                 servoStep--;
                 if (servoStep < 0) servoStep = 0;
@@ -133,26 +163,26 @@ public class ConceptAprilTag extends LinearOpMode {
             spinning_pad_discrete.setPosition(servo_position);
 
             // -------- APRILTAG AUTO TURN --------
-
             if (!aprilTag.getDetections().isEmpty()) {
-
                 AprilTagDetection tag = aprilTag.getDetections().get(0);
                 double error = (tag.center.x - 320) / 320.0;
-
                 error = Math.max(-1, Math.min(1, error));
-
-//                double turn = error * 0.8;
-//                if (Math.abs(error) < 0.05) turn = 0;
-//                turn = Math.max(-0.4, Math.min(0.4, turn));
-
-                bruce.setPower(-error);
+                double distance = tag.ftcPose.range;
+                targetPitch = (distance-100)/500;
+                drivetrain.drive(gamepad1, 1);
+                bruce.setPower(-0.5* error);
 
             } else {
                 drivetrain.drive(gamepad1, 1);
+                currentPitch = throwPitchAdjuster.getPosition();
+                targetPitch = currentPitch - curGamepad1.right_stick_y * pitchStep;
+
+
             }
-
+            if (targetPitch >= 0.4) targetPitch = 0.4;
+            else if (targetPitch <= 0.11) targetPitch = 0.11;
+            throwPitchAdjuster.setPosition(targetPitch);
             // -------- TELEMETRY --------
-
             telemetry.addData("Servo Step", servoStep);
             telemetry.addData("Servo Angle (deg)", servoStep * 120);
             telemetry.addData("Servo Position", "%.3f", servoPosition);
@@ -169,10 +199,12 @@ public class ConceptAprilTag extends LinearOpMode {
     private void initAprilTag() {
 
         aprilTag = new AprilTagProcessor.Builder()
+                .setTagLibrary(AprilTagGameDatabase.getCurrentGameTagLibrary())
                 .setDrawAxes(true)
                 .setDrawCubeProjection(true)
                 .setDrawTagID(true)
                 .setDrawTagOutline(true)
+                .setOutputUnits(DistanceUnit.CM, AngleUnit.DEGREES)
                 .build();
 
         aprilTag.setDecimation(2);
@@ -203,8 +235,12 @@ public class ConceptAprilTag extends LinearOpMode {
         for (AprilTagDetection d : detections) {
             if (d.metadata != null) {
                 telemetry.addLine(String.format(
-                        "ID %d | XYZ %.1f %.1f %.1f",
-                        d.id, d.ftcPose.x, d.ftcPose.y, d.ftcPose.z));
+                        "ID %d | Range %.1f cm | Bearing %.1f deg | Yaw %.1f deg",
+                        d.id,
+                        d.ftcPose.range,
+                        d.ftcPose.bearing,
+                        d.ftcPose.yaw
+                ));
             } else {
                 telemetry.addLine(String.format("ID %d | Unknown", d.id));
             }
