@@ -61,10 +61,10 @@ public class ConceptAprilTag extends LinearOpMode {
     private Servo spinning_pad_discrete;
 
     // ----- DISCRETE SERVO CONTROL -----
-    int servoStep = 0;                // 0,1,2
+    int servoStep = 8;                // 0,1,2
     final int SERVO_STEPS = 15;         // 360 / 120
 
-    double servo_position=0;
+    double servo_position=0.5;
     double step=0;
 
     @Override
@@ -99,7 +99,7 @@ public class ConceptAprilTag extends LinearOpMode {
             curGamepad1.copy(gamepad1);
 
             // Intake
-            if (curGamepad1.a) intakeMotor.setPower(0.6);
+            if (curGamepad1.a) intakeMotor.setPower(1);
             else intakeMotor.setPower(0);
 
             // Throwing
@@ -109,11 +109,7 @@ public class ConceptAprilTag extends LinearOpMode {
             // Bruce manual control
             bruce.setPower(curGamepad1.right_stick_x * -1);
 
-            if (curGamepad1.dpad_left) {
-                bruce.setPower(0.1);
-            } else if (curGamepad1.dpad_right) {
-                bruce.setPower(-0.1);
-            } else if (curGamepad1.right_stick_x == 0) {
+            if (curGamepad1.right_stick_x == 0) {
                 bruce.setPower(0);
             }
 
@@ -122,13 +118,13 @@ public class ConceptAprilTag extends LinearOpMode {
             // Clockwise
             if (curGamepad1.dpad_right && !prevGamepad1.dpad_right) {
                 servoStep++;
-                if (servoStep >= SERVO_STEPS) servoStep = 0;
+                if (servoStep >= SERVO_STEPS) servoStep = SERVO_STEPS;
             }
 
             // Counter-clockwise
             if (curGamepad1.dpad_left && !prevGamepad1.dpad_left) {
                 servoStep--;
-                if (servoStep < 0) servoStep = SERVO_STEPS - 1;
+                if (servoStep < 0) servoStep = 0;
             }
 
             double servoPosition = servoStep / (double) SERVO_STEPS;
