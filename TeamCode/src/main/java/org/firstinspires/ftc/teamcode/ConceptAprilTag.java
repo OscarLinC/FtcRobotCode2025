@@ -66,9 +66,15 @@ public class ConceptAprilTag extends LinearOpMode {
     private Servo throwPitchAdjuster;
 
     // ----- DISCRETE SERVO CONTROL -----
-    int servoStep = 8;                // 0,1,2
+    int servoStep = 0;                // 0,1,2
     final int SERVO_STEPS = 15;         // 360 / 120
+    //daniel is cooking
+    // ---- Spinning pad 3-slot positions (CALIBRATE THESE) ----
+    private int padIndex = 0;  // 0,1,2
 
+    // Start values; you must tune them until each slot is centered at intake.
+    private final double[] PAD_POS = { 0.04,0.115, 0.188  };
+    //daniek is indeed cooking
     double servo_position=0.5;
     double step=0;
     boolean toggleIntake = false;
@@ -77,6 +83,7 @@ public class ConceptAprilTag extends LinearOpMode {
     double currentPitch;
     double pitchStep = 0.02;
     double targetPitch;
+
 
     @Override
     public void runOpMode() {
@@ -147,20 +154,20 @@ public class ConceptAprilTag extends LinearOpMode {
             if (curGamepad1.right_stick_x == 0) bruce.setPower(0);
 
             // -------- SERVO DISCRETE ROTATION --------
+// -------- SPINNING PAD: 3-slot indexing (120° each) --------
             if (curGamepad1.dpad_right && !prevGamepad1.dpad_right) {
-                servoStep++;
-                if (servoStep >= SERVO_STEPS) servoStep = SERVO_STEPS;
+                padIndex = (padIndex + 1) % 3;     // 0->1->2->0
             }
-
             if (curGamepad1.dpad_left && !prevGamepad1.dpad_left) {
-                servoStep--;
-                if (servoStep < 0) servoStep = 0;
+                padIndex = (padIndex + 2) % 3;     // 0->2->1->0
             }
 
-            double servoPosition = servoStep / (double) SERVO_STEPS;
-            step=(servoPosition-servo_position)/10;
-            servo_position=servo_position+step;
-            spinning_pad_discrete.setPosition(servo_position);
+            spinning_pad_discrete.setPosition(PAD_POS[padIndex]);
+
+            telemetry.addData("Pad Index", padIndex);
+            telemetry.addData("Pad Angle (deg)", padIndex * 120);
+            telemetry.addData("Pad Position", "%.3f", PAD_POS[padIndex]);
+
 
             // -------- APRILTAG AUTO TURN --------
             if (!aprilTag.getDetections().isEmpty()) {
@@ -183,9 +190,9 @@ public class ConceptAprilTag extends LinearOpMode {
             else if (targetPitch <= 0.11) targetPitch = 0.11;
             throwPitchAdjuster.setPosition(targetPitch);
             // -------- TELEMETRY --------
-            telemetry.addData("Servo Step", servoStep);
-            telemetry.addData("Servo Angle (deg)", servoStep * 120);
-            telemetry.addData("Servo Position", "%.3f", servoPosition);
+//            telemetry.addData("Servo Step", servoStep);
+//            telemetry.addData("Servo Angle (deg)", servoStep * 120);
+//            telemetry.addData("Servo Position", "%.3f", servoPosition);
 
             telemetryAprilTag();
             telemetry.update();
@@ -217,7 +224,7 @@ public class ConceptAprilTag extends LinearOpMode {
             builder.setCamera(BuiltinCameraDirection.BACK);
         }
 
-        builder.setCameraResolution(new Size(640, 480));
+        builder.setCameraResolution(new Size(1280, 720));
         builder.enableLiveView(true);
         builder.setStreamFormat(VisionPortal.StreamFormat.YUY2);
         builder.addProcessor(aprilTag);
