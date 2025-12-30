@@ -104,7 +104,7 @@ public class ConceptAprilTag extends LinearOpMode {
             if (toggleIntake) intakeMotor.setPower(1);
             else if (toggleSpitOut) intakeMotor.setPower(-1);
             else intakeMotor.setPower(0);
-
+///remember to change this
             // Throwing toggle
             if (curGamepad2.b && !prevGamepad2.b) toggleThrow = !toggleThrow;
 
