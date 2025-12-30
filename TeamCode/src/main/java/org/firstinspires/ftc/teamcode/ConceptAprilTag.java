@@ -1,32 +1,3 @@
-/* Copyright (c) 2023 FIRST. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted (subject to the limitations in the disclaimer below) provided that
- * the following conditions are met:
- *
- * Redistributions of source code must retain the above copyright notice, this list
- * of conditions and the following disclaimer.
- *
- * Redistributions in binary form must reproduce the above copyright notice, this
- * list of conditions and the following disclaimer in the documentation and/or
- * other materials provided with the distribution.
- *
- * Neither the name of FIRST nor the names of its contributors may be used to endorse or
- * promote products derived from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS
- * LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
 package org.firstinspires.ftc.teamcode;
 
 import android.util.Size;
@@ -34,6 +5,7 @@ import android.util.Size;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.Servo;
 
@@ -62,28 +34,17 @@ public class ConceptAprilTag extends LinearOpMode {
     private DcMotorEx bruce;
     private DcMotorEx intakeMotor;
     private Servo spinning_pad_discrete;
-
     private Servo throwPitchAdjuster;
 
-    // ----- DISCRETE SERVO CONTROL -----
-    int servoStep = 0;                // 0,1,2
-    final int SERVO_STEPS = 15;         // 360 / 120
-    //daniel is cooking
-    // ---- Spinning pad 3-slot positions (CALIBRATE THESE) ----
+    // ----- 3-SLOT SPINNING PAD CONTROL -----
     private int padIndex = 0;  // 0,1,2
-
-    // Start values; you must tune them until each slot is centered at intake.
-    private final double[] PAD_POS = { 0.04,0.115, 0.188  };
-    //daniek is indeed cooking
-    double servo_position=0.5;
-    double step=0;
-    boolean toggleIntake = false;
-    boolean toggleSpitOut = false;
-    boolean toggleThrow = false;
+    private final double[] PAD_POS = {0.04, 0.115, 0.188};
     double currentPitch;
     double pitchStep = 0.02;
     double targetPitch;
-
+    boolean toggleIntake = false;
+    boolean toggleSpitOut = false;
+    boolean toggleThrow = false;
 
     @Override
     public void runOpMode() {
@@ -99,6 +60,7 @@ public class ConceptAprilTag extends LinearOpMode {
         intakeMotor = hardwareMap.get(DcMotorEx.class, "Intake Motor");
         spinning_pad_discrete = hardwareMap.get(Servo.class, "Spinning Pad");
         throwPitchAdjuster = hardwareMap.get(Servo.class, "Throw Pitch Adjuster");
+        bruce.setDirection(DcMotorSimple.Direction.REVERSE);
 
         drivetrain = new DriveTrain(
                 hardwareMap.get(DcMotorEx.class, "M1"),
@@ -117,16 +79,11 @@ public class ConceptAprilTag extends LinearOpMode {
             prevGamepad1.copy(curGamepad1);
             curGamepad1.copy(gamepad1);
 
-            if (curGamepad1.dpad_up) throwPitchAdjuster.setPosition(0.5);
+            // Pitch manual control
+            if (curGamepad1.dpad_up) throwPitchAdjuster.setPosition(0.6);
             else if (curGamepad1.dpad_down) throwPitchAdjuster.setPosition(0.11);
 
-            //Pitch manual control
-
-
-
-
-
-            // Intake
+            // Intake toggle
             if (curGamepad1.a && !prevGamepad1.a) {
                 toggleIntake = !toggleIntake;
                 toggleSpitOut = false;
@@ -136,38 +93,30 @@ public class ConceptAprilTag extends LinearOpMode {
                 toggleIntake = false;
             }
 
-            if (toggleIntake) {
-                intakeMotor.setPower(1);
-            }
-            else if (toggleSpitOut) {
-                intakeMotor.setPower(-1);
-            }
+            if (toggleIntake) intakeMotor.setPower(1);
+            else if (toggleSpitOut) intakeMotor.setPower(-1);
             else intakeMotor.setPower(0);
 
-            // Throwing
-            if (curGamepad1.b && !prevGamepad1.b) toggleThrow = ! toggleThrow;
-            if (toggleThrow) throwingMotor.setPower(1);
-            else throwingMotor.setPower(0);
+            // Throwing toggle
+            if (curGamepad1.b && !prevGamepad1.b) toggleThrow = !toggleThrow;
+            throwingMotor.setPower(toggleThrow ? 1 : 0);
 
             // Bruce manual control
             bruce.setPower(curGamepad1.right_stick_x * -1);
             if (curGamepad1.right_stick_x == 0) bruce.setPower(0);
 
-            // -------- SERVO DISCRETE ROTATION --------
-// -------- SPINNING PAD: 3-slot indexing (120° each) --------
+            // -------- SPINNING PAD 3-SLOT CONTROL --------
             if (curGamepad1.dpad_right && !prevGamepad1.dpad_right) {
-                padIndex = (padIndex + 1) % 3;     // 0->1->2->0
+                padIndex = (padIndex + 1) % 3;
             }
             if (curGamepad1.dpad_left && !prevGamepad1.dpad_left) {
-                padIndex = (padIndex + 2) % 3;     // 0->2->1->0
+                padIndex = (padIndex + 2) % 3; // decrement with wrap
             }
-
             spinning_pad_discrete.setPosition(PAD_POS[padIndex]);
 
             telemetry.addData("Pad Index", padIndex);
             telemetry.addData("Pad Angle (deg)", padIndex * 120);
             telemetry.addData("Pad Position", "%.3f", PAD_POS[padIndex]);
-
 
             // -------- APRILTAG AUTO TURN --------
             if (!aprilTag.getDetections().isEmpty()) {
@@ -175,25 +124,21 @@ public class ConceptAprilTag extends LinearOpMode {
                 double error = (tag.center.x - 320) / 320.0;
                 error = Math.max(-1, Math.min(1, error));
                 double distance = tag.ftcPose.range;
-                targetPitch = (distance-100)/500;
+                targetPitch = (distance - 100) / 500;
                 drivetrain.drive(gamepad1, 1);
-                bruce.setPower(-0.5* error);
+                bruce.setPower(0.75 * error);
 
             } else {
                 drivetrain.drive(gamepad1, 1);
                 currentPitch = throwPitchAdjuster.getPosition();
                 targetPitch = currentPitch - curGamepad1.right_stick_y * pitchStep;
-
-
             }
-            if (targetPitch >= 0.4) targetPitch = 0.4;
+
+            if (targetPitch >= 0.6) targetPitch = 0.6;
             else if (targetPitch <= 0.11) targetPitch = 0.11;
             throwPitchAdjuster.setPosition(targetPitch);
-            // -------- TELEMETRY --------
-//            telemetry.addData("Servo Step", servoStep);
-//            telemetry.addData("Servo Angle (deg)", servoStep * 120);
-//            telemetry.addData("Servo Position", "%.3f", servoPosition);
 
+            // -------- TELEMETRY --------
             telemetryAprilTag();
             telemetry.update();
 
@@ -224,7 +169,7 @@ public class ConceptAprilTag extends LinearOpMode {
             builder.setCamera(BuiltinCameraDirection.BACK);
         }
 
-        builder.setCameraResolution(new Size(1280, 720));
+        builder.setCameraResolution(new Size(640, 480));
         builder.enableLiveView(true);
         builder.setStreamFormat(VisionPortal.StreamFormat.YUY2);
         builder.addProcessor(aprilTag);

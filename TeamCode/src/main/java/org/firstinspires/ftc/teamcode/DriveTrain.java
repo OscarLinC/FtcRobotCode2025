@@ -12,7 +12,7 @@ public class DriveTrain {
    - m1|      |m3 +
       |      |
       |      |
-    -m2|      |m4 +
+    +m2|      |m4 -
        ------
      */
 
