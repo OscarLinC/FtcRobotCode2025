@@ -35,10 +35,13 @@ public class ConceptAprilTag extends LinearOpMode {
     private DcMotorEx intakeMotor;
     private Servo spinning_pad_discrete;
     private Servo throwPitchAdjuster;
+    private Servo transferServo;
+    private static final double BRUCE_POWER = 0.4;  // tune later
 
     // ----- 3-SLOT SPINNING PAD CONTROL -----
     private int padIndex = 0;  // 0,1,2
     private final double[] PAD_POS = {0.04, 0.115, 0.188};
+    private final double[] PAD_POS_READY = {0.08, 0.154, 0.1515};
     double currentPitch;
     double pitchStep = 0.02;
     double targetPitch;
@@ -60,6 +63,7 @@ public class ConceptAprilTag extends LinearOpMode {
         intakeMotor = hardwareMap.get(DcMotorEx.class, "Intake Motor");
         spinning_pad_discrete = hardwareMap.get(Servo.class, "Spinning Pad");
         throwPitchAdjuster = hardwareMap.get(Servo.class, "Throw Pitch Adjuster");
+        transferServo = hardwareMap.get(Servo.class, "Transfer Servo");
         bruce.setDirection(DcMotorSimple.Direction.REVERSE);
 
         drivetrain = new DriveTrain(
@@ -71,6 +75,8 @@ public class ConceptAprilTag extends LinearOpMode {
 
         Gamepad prevGamepad1 = new Gamepad();
         Gamepad curGamepad1 = new Gamepad();
+        Gamepad prevGamepad2 = new Gamepad();
+        Gamepad curGamepad2 = new Gamepad();
 
         waitForStart();
 
@@ -78,10 +84,12 @@ public class ConceptAprilTag extends LinearOpMode {
 
             prevGamepad1.copy(curGamepad1);
             curGamepad1.copy(gamepad1);
+            prevGamepad2.copy(curGamepad2);
+            curGamepad2.copy(gamepad2);
 
             // Pitch manual control
-            if (curGamepad1.dpad_up) throwPitchAdjuster.setPosition(0.6);
-            else if (curGamepad1.dpad_down) throwPitchAdjuster.setPosition(0.11);
+            if (curGamepad2.dpad_up) throwPitchAdjuster.setPosition(0.6);
+            else if (curGamepad2.dpad_down) throwPitchAdjuster.setPosition(0.11);
 
             // Intake toggle
             if (curGamepad1.a && !prevGamepad1.a) {
@@ -98,27 +106,46 @@ public class ConceptAprilTag extends LinearOpMode {
             else intakeMotor.setPower(0);
 
             // Throwing toggle
-            if (curGamepad1.b && !prevGamepad1.b) toggleThrow = !toggleThrow;
+            if (curGamepad2.b && !prevGamepad2.b) toggleThrow = !toggleThrow;
+
             throwingMotor.setPower(toggleThrow ? 1 : 0);
 
+            if (toggleThrow) {
+                spinning_pad_discrete.setPosition(PAD_POS_READY[padIndex]);
+                if(Math.abs(spinning_pad_discrete.getPosition() - PAD_POS_READY[padIndex]) < 0.0005){
+                    transferServo.setPosition(0.2);
+                }
+
+
+            }
+            else {
+                transferServo.setPosition(0.55);
+                if (Math.abs(transferServo.getPosition()-0.55) < 0.05){
+                    spinning_pad_discrete.setPosition(PAD_POS[padIndex]);
+                }
+            }
+
+
+
+
             // Bruce manual control
-            bruce.setPower(curGamepad1.right_stick_x * -1);
-            if (curGamepad1.right_stick_x == 0) bruce.setPower(0);
+            bruce.setPower(curGamepad2.right_stick_x * -1);
+            if (curGamepad2.right_stick_x == 0) bruce.setPower(0);
 
             // -------- SPINNING PAD 3-SLOT CONTROL --------
-            if (curGamepad1.dpad_right && !prevGamepad1.dpad_right) {
+            if (curGamepad2.dpad_right && !prevGamepad2.dpad_right) {
                 padIndex = (padIndex + 1) % 3;
             }
-            if (curGamepad1.dpad_left && !prevGamepad1.dpad_left) {
+            if (curGamepad2.dpad_left && !prevGamepad2.dpad_left) {
                 padIndex = (padIndex + 2) % 3; // decrement with wrap
             }
-            spinning_pad_discrete.setPosition(PAD_POS[padIndex]);
+
 
             telemetry.addData("Pad Index", padIndex);
             telemetry.addData("Pad Angle (deg)", padIndex * 120);
             telemetry.addData("Pad Position", "%.3f", PAD_POS[padIndex]);
 
-            // -------- APRILTAG AUTO TURN --------
+            // -------- APRILTAG AUTO TU           0N --------
             if (!aprilTag.getDetections().isEmpty()) {
                 AprilTagDetection tag = aprilTag.getDetections().get(0);
                 double error = (tag.center.x - 320) / 320.0;
@@ -131,7 +158,7 @@ public class ConceptAprilTag extends LinearOpMode {
             } else {
                 drivetrain.drive(gamepad1, 1);
                 currentPitch = throwPitchAdjuster.getPosition();
-                targetPitch = currentPitch - curGamepad1.right_stick_y * pitchStep;
+                targetPitch = currentPitch - curGamepad2.right_stick_y * pitchStep;
             }
 
             if (targetPitch >= 0.6) targetPitch = 0.6;
