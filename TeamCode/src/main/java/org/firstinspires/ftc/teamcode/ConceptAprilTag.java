@@ -23,7 +23,7 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.util.List;
 
-@TeleOp(name = "Concept: AprilTag", group = "Concept")
+@TeleOp(name = "Concept: AprilTag Final 20250106", group = "Concept")
 public class ConceptAprilTag extends LinearOpMode {
 
     private DriveTrain drivetrain;
@@ -214,19 +214,19 @@ public class ConceptAprilTag extends LinearOpMode {
             // 3. MOTOR POWER
             throwingMotor.setPower(toggleThrow ? 1 : 0);
 
-            // 4. THE UPDATED STATE MACHINE
+            // 4. THE UPDATED STAT[E MACHINE
             switch (sequenceStep) {
 
                 case 0: // IDLE
                     spinning_pad_discrete.setPosition(PAD_POS[padIndex]);
-                    transferServo.setPosition(0.5);
+                    transferServo.setPosition(0.55);
                     transferServo2.setPosition(0.25);
                     transferServo3.setPosition(0.55);
                     break;
 
                 case 1: // Move pad to shooting alignment
                     sequenceIndex = 0;
-                    spinning_pad_discrete.setPosition(PAD_POS_READY[0]);
+                    spinning_pad_discrete.setPosition(0.26);
                     if (sequenceTimer.seconds() > 0.3) {
                         sequenceStep = transferServoSequence[sequenceIndex] + 1;
                         sequenceTimer.reset();
@@ -234,11 +234,13 @@ public class ConceptAprilTag extends LinearOpMode {
                     break;
 
                 case 2: // Raise 1st arm to shoot (transferServo)
-                    sleep(300);
+
                     transferServo.setPosition(0.1);
                     if (sequenceTimer.seconds() > 0.5) {
                         if (curGamepad2.dpad_left && !prevGamepad2.dpad_left){
-                            transferServo.setPosition(0.65); // Return to original position
+                            spinning_pad_discrete.setPosition(0.245);
+                            transferServo.setPosition(0.75); // Return to original position
+                            sleep(1500);
                             advanceSequence();
                             // timer is reset inside advanceSequence()
                         }
@@ -250,18 +252,26 @@ public class ConceptAprilTag extends LinearOpMode {
                     transferServo2.setPosition(0.65);
                     if (sequenceTimer.seconds() > 0.5) {
                         if (curGamepad2.dpad_left && !prevGamepad2.dpad_left){
+
+
                             transferServo2.setPosition(0.1); // Return to original position
+                            sleep(300);
                             advanceSequence();
+
                         }
                     }
                     break;
 
                 case 4: // Raise 3rd arm to shoot (transferServo3)
-                    sleep(300);
-                    transferServo3.setPosition(0.2);
+
                     if (sequenceTimer.seconds() > 0.5) {
                         if (curGamepad2.dpad_left && !prevGamepad2.dpad_left){
+                            spinning_pad_discrete.setPosition(0.235);
+                            sleep(2000);
+                            transferServo3.setPosition(0.87);
+                            sleep(4000);
                             transferServo3.setPosition(0.55); // Return to original position
+                            sleep(300);
                             advanceSequence();
                         }
                     }
@@ -270,7 +280,7 @@ public class ConceptAprilTag extends LinearOpMode {
 
             // Bruce manual control
             bruce.setPower(curGamepad2.right_stick_x * -1);
-            if (curGamepad2.right_stick_x == 0) bruce.setPower(0);
+            if (curGamepad2.right_stick_x == 0) bruce.setPower(0);  \i
 
             // -------- APRILTAG AUTO --------
             if (!aprilTag.getDetections().isEmpty()) {
