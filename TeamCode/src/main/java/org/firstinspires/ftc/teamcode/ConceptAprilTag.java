@@ -23,7 +23,7 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.util.List;
 
-@TeleOp(name = "Concept: AprilTag Final 20250106", group = "Concept")
+@TeleOp(name = "Concept: AprilTag Final 20250109", group = "Concept")
 public class ConceptAprilTag extends LinearOpMode {
 
     private DriveTrain drivetrain;
@@ -75,6 +75,11 @@ public class ConceptAprilTag extends LinearOpMode {
     // ID 23 = PPG
     boolean toggleThrow2 = false;
     private int[] transferServoSequence = {1, 2, 3};
+    // ----- BRUCE (HOOD) LIMITS -----
+    // TODO: CHANGE THIS TO MATCH YOUR MOTOR (e.g., 537.7 for GoBilda 312RPM, 28 for Rev Core Hex)
+    final double BRUCE_TICKS_PER_REV = 537.7;
+    // 45 degrees = 1/8th of a circle
+    final int BRUCE_LIMIT_TICKS = (int)(BRUCE_TICKS_PER_REV * (45.0 / 360.0));
     @Override
     public void runOpMode() {
 
@@ -86,6 +91,14 @@ public class ConceptAprilTag extends LinearOpMode {
 
         throwingMotor = hardwareMap.get(DcMotorEx.class, "Throwing Motor");
         bruce = hardwareMap.get(DcMotorEx.class, "Bruce");
+        bruce.setDirection(DcMotorSimple.Direction.REVERSE);
+        // --- NEW CODE: CONFIGURE BRUCE ENCODER ---
+        // Reset the encoder so the current position becomes "0"
+        bruce.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        // Turn motor back on in manual power mode (but it will now track position)
+        bruce.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        // Optional: Turn on braking so it holds position better
+        bruce.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
         intakeMotor = hardwareMap.get(DcMotorEx.class, "Intake Motor");
         spinning_pad_discrete = hardwareMap.get(Servo.class, "Spinning Pad");
         throwPitchAdjuster = hardwareMap.get(Servo.class, "Throw Pitch Adjuster");
@@ -215,6 +228,7 @@ public class ConceptAprilTag extends LinearOpMode {
             throwingMotor.setPower(toggleThrow ? 1 : 0);
 
             // 4. THE UPDATED STAT[E MACHINE
+            // 4. THE UPDATED STATE MACHINE
             switch (sequenceStep) {
 
                 case 0: // IDLE
@@ -227,60 +241,89 @@ public class ConceptAprilTag extends LinearOpMode {
                 case 1: // Move pad to shooting alignment
                     sequenceIndex = 0;
                     spinning_pad_discrete.setPosition(0.26);
+                    sleep(1500);
                     if (sequenceTimer.seconds() > 0.3) {
+                        // Automatically go to the first ball step
                         sequenceStep = transferServoSequence[sequenceIndex] + 1;
                         sequenceTimer.reset();
                     }
                     break;
 
                 case 2: // Raise 1st arm to shoot (transferServo)
+                    transferServo.setPosition(0.1); // Move to "Ready" position
 
-                    transferServo.setPosition(0.1);
+                    // Wait 0.5s, then automatically fire
                     if (sequenceTimer.seconds() > 0.5) {
-                        if (curGamepad2.dpad_left && !prevGamepad2.dpad_left){
-                            spinning_pad_discrete.setPosition(0.245);
-                            transferServo.setPosition(0.75); // Return to original position
-                            sleep(1500);
-                            advanceSequence();
-                            // timer is reset inside advanceSequence()
-                        }
+                        sleep(1500);
+                        spinning_pad_discrete.setPosition(0.245);
+                        sleep(1500);
+                        transferServo.setPosition(0.75); // Fire/Return
+                        sleep(1500); // FREEZES ROBOT
+                        advanceSequence();
                     }
                     break;
 
                 case 3: // Raise 2nd arm to shoot (transferServo2)
+                    sleep(1500);
+                    transferServo2.setPosition(0.65); // Move to "Ready" position
+                    sleep(1500);
 
-                    transferServo2.setPosition(0.65);
+                    // Wait 0.5s, then automatically fire
                     if (sequenceTimer.seconds() > 0.5) {
-                        if (curGamepad2.dpad_left && !prevGamepad2.dpad_left){
+                        sleep(1500);
+                        transferServo2.setPosition(0.1); // Fire/Return
 
-
-                            transferServo2.setPosition(0.1); // Return to original position
-                            sleep(300);
-                            advanceSequence();
-
-                        }
+                        sleep(300); // FREEZES ROBOT
+                        advanceSequence();
                     }
                     break;
 
                 case 4: // Raise 3rd arm to shoot (transferServo3)
+                    // Note: No initial position set here in your snippet, preserving your logic
 
+                    // Wait 0.5s, then automatically fire
                     if (sequenceTimer.seconds() > 0.5) {
-                        if (curGamepad2.dpad_left && !prevGamepad2.dpad_left){
-                            spinning_pad_discrete.setPosition(0.235);
-                            sleep(2000);
-                            transferServo3.setPosition(0.87);
-                            sleep(4000);
-                            transferServo3.setPosition(0.55); // Return to original position
-                            sleep(300);
-                            advanceSequence();
-                        }
+                        spinning_pad_discrete.setPosition(0.235);
+                        sleep(2000); // FREEZES ROBOT
+                        transferServo3.setPosition(0.9
+
+
+                        );
+                        sleep(2000); // FREEZES ROBOT (4 Seconds!)
+                        transferServo3.setPosition(0.55);
+                        sleep(300);  // FREEZES ROBOT
+                        advanceSequence();
                     }
                     break;
             }
 
             // Bruce manual control
-            bruce.setPower(curGamepad2.right_stick_x * -1);
-            if (curGamepad2.right_stick_x == 0) bruce.setPower(0);  \i
+//            bruce.setPower(curGamepad2.right_stick_x * -1);
+//            if (curGamepad2.right_stick_x == 0) bruce.setPower(0);
+
+
+            // -------- BRUCE (HOOD) MANUAL CONTROL WITH LIMITS --------
+            double joystickInput = curGamepad2.right_stick_x * -1;
+            int currentPos = bruce.getCurrentPosition();
+
+            // Logic: If trying to go POSITIVE (Left?) but already past limit -> Stop
+            //        If trying to go NEGATIVE (Right?) but already past negative limit -> Stop
+
+            if (joystickInput > 0 && currentPos > BRUCE_LIMIT_TICKS) {
+                bruce.setPower(0); // Hit the positive (left) barrier
+            }
+            else if (joystickInput < 0 && currentPos < -BRUCE_LIMIT_TICKS) {
+                bruce.setPower(0); // Hit the negative (right) barrier
+            }
+            else {
+                // Within safe range, allow movement
+                bruce.setPower(joystickInput);
+            }
+
+            // Telemetry to help you debug limits
+            telemetry.addData("Bruce Pos", currentPos);
+            telemetry.addData("Bruce Limit", "+/- " + BRUCE_LIMIT_TICKS);
+
 
             // -------- APRILTAG AUTO --------
             if (!aprilTag.getDetections().isEmpty()) {
